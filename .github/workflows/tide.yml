@@ -20,8 +20,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Install the necessary dependencies for Chromium and Selenium to run in headless mode
           sudo apt-get update
-          sudo apt-get install -y wget curl unzip libx11-xcb1 libnss3 libgbm-dev libasound2
+          sudo apt-get install -y wget curl unzip libx11-xcb1 libnss3 libgbm-dev
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 

@@ -1,6 +1,5 @@
 import os
 import logging
-from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -19,8 +18,6 @@ logging.basicConfig(
 # ------------------------------
 # Load Environment Variables
 # ------------------------------
-load_dotenv()
-
 access_token = os.environ.get('PUSHBULLET_ACCESS_TOKEN')
 station_name = os.environ.get('STATION_NAME')
 

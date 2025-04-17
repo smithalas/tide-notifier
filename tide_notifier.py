@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -7,80 +8,71 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from pushbullet import Pushbullet
 
-# ------------------------------
-# Logging Setup
-# ------------------------------
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-)
+# Set up logging for debugging
+logging.basicConfig(level=logging.DEBUG)
 
-# ------------------------------
-# Load Environment Variables
-# ------------------------------
+# Get Pushbullet token and station name from environment variables
+load_dotenv()
 access_token = os.environ.get('PUSHBULLET_ACCESS_TOKEN')
-station_name = os.environ.get('STATION_NAME')
+station_name = os.environ.get('STATION_NAME', '').strip()  # Stripping to avoid trailing spaces
 
-# ------------------------------
-# Environment Variable Checks
-# ------------------------------
+# Error handling for missing environment variables
 if access_token is None:
     logging.error("PUSHBULLET_ACCESS_TOKEN not found in environment")
     exit()
 
-if station_name is None:
+if not station_name:
     logging.error("STATION_NAME not found in environment")
     exit()
 
-logging.info(f"Using station: {station_name}")
-
-# ------------------------------
-# Set up WebDriver
-# ------------------------------
+# Set up WebDriver (headless mode with extra options for CI environments)
 options = webdriver.ChromeOptions()
 options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-gpu")
 driver = webdriver.Chrome(options=options)
 
-# ------------------------------
-# Fetch Tide Prediction Page
-# ------------------------------
+# Fetch tide prediction page
 try:
+    logging.info(f"Fetching tide data for {station_name}...")
     driver.get("http://tidepredictions.pla.co.uk/")
+
+    # Wait for page elements to load
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, ".TideNow1_tbody tr"))
     )
+
+    # Parse page with BeautifulSoup
     soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    # Log first 1000 characters of the fetched page for debugging
+    logging.debug("Fetched page source:\n" + soup.prettify()[:1000])
+
 finally:
+    # Ensure the driver is closed even if an error occurs
     driver.quit()
 
-# ------------------------------
-# Extract Tide Data
-# ------------------------------
+# Find the tide data in the parsed HTML
 tbody = soup.find('tbody', class_='TideNow1_tbody')
 rows = tbody.find_all('tr')
 row_data = []
 
-logging.debug("Available stations on the page:")
+# Extract the data for the station we're interested in
 for row in rows:
     cells = [td.get_text(strip=True) for td in row.find_all('td')]
-    if cells:
-        logging.debug(f" - {cells[0]}")
-    if cells and cells[0].strip().lower() == station_name.strip().lower():
-        logging.info(f"Found matching station row: {cells}")
-        row_data.append(cells)
+    if cells and cells[0] == station_name:
+        row_data.append(cells)  # First row (predicted tide times)
     elif row_data:
-        row_data.append(cells)
+        row_data.append(cells)  # Second row (heights)
         break
 
-if not row_data or len(row_data) < 2:
-    logging.error(f"{station_name} data not found or incomplete.")
+# Error handling if the data is not found
+if not row_data:
+    logging.error(f"Error: No data found for {station_name}.")
     exit()
 
-logging.debug(f"Collected row data: {row_data}")
-
-# ------------------------------
-# Prepare Notification
-# ------------------------------
+# Prepare the tide information for the notification
 tide_info = {
     "station": station_name,
     "predicted": row_data[0][1],
@@ -90,6 +82,7 @@ tide_info = {
     "low_height": row_data[1][1],
 }
 
+# Push notification with tide data
 pb = Pushbullet(access_token)
 
 message = f"""🌊 {station_name} Tide Update:
@@ -98,6 +91,8 @@ High Tide: {tide_info['next_high_time']} ({tide_info['high_height']})
 Low Tide: {tide_info['next_low_time']} ({tide_info['low_height']})
 """
 
-logging.info("Sending push notification...")
+# Send the push notification
 push = pb.push_note(f"Tide Times - {station_name}", message)
-logging.info("Notification sent successfully.")
+
+# Log the message being sent
+logging.info(f"Push notification sent: {message}")

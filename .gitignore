@@ -1,0 +1,8 @@
+# Virtual environment
+venv/
+
+# Ignore .env file
+.env
+
+# Ignore test Python script
+tide_notifier_pla.py

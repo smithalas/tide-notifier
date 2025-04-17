@@ -21,23 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            wget \
-            curl \
-            unzip \
-            libx11-dev \
-            libx11-xcb1 \
-            libxcomposite1 \
-            libxrandr2 \
-            libxss1 \
-            libgdk-pixbuf2.0-0 \
-            libdbus-1-3 \
-            libasound2 \
-            fonts-liberation \
-            libappindicator3-1 \
-            libnss3 \
-            lsb-release \
-            xdg-utils
+          sudo apt-get install -y wget curl unzip libx11-xcb1 libnss3 libgbm-dev libasound2
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 

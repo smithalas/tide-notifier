@@ -10,17 +10,19 @@ from pushbullet import Pushbullet
 # Load environment variables
 load_dotenv()
 
-# Get Pushbullet token and station name from the .env file
-access_token = os.getenv('PUSHBULLET_ACCESS_TOKEN')
-station_name = os.getenv('STATION_NAME')
+from pushbullet import Pushbullet
 
-# Error handling for missing .env variables
+# Get Pushbullet token and station name from environment variables
+access_token = os.environ.get('PUSHBULLET_ACCESS_TOKEN')
+station_name = os.environ.get('STATION_NAME')
+
+# Error handling for missing environment variables
 if access_token is None:
-    print("Error: PUSHBULLET_ACCESS_TOKEN not found in .env file")
+    print("Error: PUSHBULLET_ACCESS_TOKEN not found in environment")
     exit()
 
 if station_name is None:
-    print("Error: STATION_NAME not found in .env file")
+    print("Error: STATION_NAME not found in environment")
     exit()
 
 # Set up WebDriver (headless mode)

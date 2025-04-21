@@ -43,14 +43,25 @@ if os.environ.get("CI") == "true":  # CI environment variable is set to 'true' i
 driver = webdriver.Chrome(options=options)
 
 # Fetch tide prediction page
+from selenium.common.exceptions import TimeoutException  # Add this at the top
+
+# Fetch tide prediction page
 try:
     logging.info(f"Fetching tide data for {station_name}...")
     driver.get("http://tidepredictions.pla.co.uk/")
 
-    # Wait for page elements to load with more time
-    WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".TideNow1_tbody tr"))
-    )
+    # Wait for page elements to load
+    try:
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".TideNow1_tbody tr"))
+        )
+    except TimeoutException:
+        logging.error("Timeout waiting for tide table to load.")
+        driver.save_screenshot("tide_debug_timeout.png")
+        with open("page_source_timeout.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        driver.quit()
+        exit()
 
     # Parse page with BeautifulSoup
     soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -62,7 +73,6 @@ finally:
     with open("page_source.html", "w", encoding="utf-8") as f:
         f.write(driver.page_source)
     driver.save_screenshot("tide_debug.png")
-    # Ensure the driver is closed even if an error occurs
     driver.quit()
 
 # Find the tide data in the parsed HTML
